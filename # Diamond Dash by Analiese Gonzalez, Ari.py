@@ -95,3 +95,104 @@ def setup_game():   #sets up initial positions for player, opponent, exit, and d
         diamonds.add(diamond_pos)
         used.add(diamond_pos)
     return player_pos, opp_pos, exit_pos, diamonds
+
+def grid(surface: pygame.Surface):
+    for x in range(0, WINDOW_SIZE, TILE_SIZE):
+        pygame.draw.line(surface, GRID_COLOR, (x, 0), (x, WINDOW_SIZE))
+    for y in range(0, WINDOW_SIZE, TILE_SIZE):
+        pygame.draw.line(surface, GRID_COLOR, (0, y), (WINDOW_SIZE, y))
+
+def tiles(surface: pygame.Surface, positions: Set[Position], color: Tuple[int, int, int], padding: int = 4):
+    for x, y in positions:
+        rect = pygame.Rect(
+            x * TILE_SIZE + padding,
+            y * TILE_SIZE + padding,
+            TILE_SIZE - 2 * padding,
+            TILE_SIZE - 2 * padding,
+        )
+        pygame.draw.rect(surface, color, rect, border_radius=4)
+
+def draw_game(surface: pygame.Surface, player_pos: Position, opp_pos: Position, exit_pos: Position, diamonds: Set[Position], font: pygame.font.Font, score: int, time_left: int, game_over: bool, win: bool):
+    surface.fill(BACKGROUND_COLOR)
+    grid(surface)
+    tiles(surface, {exit_pos}, EXIT_COLOR)
+    tiles(surface, diamonds, DIAMOND_COLOR)
+    tiles(surface, {player_pos}, PLAYER_COLOR)
+    tiles(surface, {opp_pos}, OPP_COLOR)
+
+    score_text = font.render(f"Score: {score}", True, TEXT_COLOR)
+    time_text = font.render(f"Time: {time_left}", True, TEXT_COLOR)
+    surface.blit(score_text, (10, 10))
+    surface.blit(time_text, (WINDOW_SIZE - time_text.get_width() - 10, 10))
+
+    if game_over:
+        overlay = pygame.Surface((WINDOW_SIZE, WINDOW_SIZE))
+        overlay.set_alpha(200)
+        overlay.fill(BACKGROUND_COLOR)
+        surface.blit(overlay, (0, 0))
+        if win:
+            msg = "You Win!"
+            color = WIN_COLOR
+        else:
+            msg = "Game Over!"
+            color = LOST_COLOR
+        msg_text = font.render(msg, True, color)
+        surface.blit(msg_text, ((WINDOW_SIZE - msg_text.get_width()) // 2, (WINDOW_SIZE - msg_text.get_height()) // 2))
+
+def player_move(player_pos: Position, direction: Tuple[int, int]) -> Position:
+    new_x = max(0, min(GRID_SIZE - 1, player_pos[0] + direction[0]))
+    new_y = max(0, min(GRID_SIZE - 1, player_pos[1] + direction[1]))
+    return (new_x, new_y)
+
+def opponent_move(opp_pos: Position, player_pos: Position) -> Position:
+    path = astar(opp_pos, player_pos)
+    if path and len(path) > 1:
+        return path[1]
+    return opp_pos
+
+def main():
+    pygame.init()
+    screen = pygame.display.set_mode((WINDOW_SIZE, WINDOW_SIZE))
+    pygame.display.set_caption("Diamond Dash")
+    clock = pygame.time.Clock()
+    font = pygame.font.SysFont(None, 36)
+
+    player_pos, opp_pos, exit_pos, diamonds = setup_game()
+    score = 0
+    start_ticks = pygame.time.get_ticks()
+    game_over = False
+    win = False
+    player_moved = False
+    while True:
+        dt = clock.tick(FPS) / 1000
+        time_left = GAME_TIMER - (pygame.time.get_ticks() - start_ticks) // 1000
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN and not game_over:
+                if event.key in DIRECTIONS:
+                    player_pos = player_move(player_pos, DIRECTIONS[event.key])
+                    player_moved = True
+
+        if not game_over:
+            if player_moved:
+                opp_pos = opponent_move(opp_pos, player_pos)
+                player_moved = False
+            if player_pos in diamonds:
+                diamonds.remove(player_pos)
+                score += 1
+
+            if player_pos == opp_pos or time_left <= 0:
+                game_over = True
+                win = False
+
+            if player_pos == exit_pos and not diamonds:
+                game_over = True
+                win = True
+
+        draw_game(screen, player_pos, opp_pos, exit_pos, diamonds, font, score, time_left, game_over, win)
+        pygame.display.flip()
+
+if __name__ == "__main__":
+    main()
