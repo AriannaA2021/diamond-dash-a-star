@@ -112,9 +112,39 @@ def tiles(surface: pygame.Surface, positions: Set[Position], color: Tuple[int, i
         )
         pygame.draw.rect(surface, color, rect, border_radius=4)
 
-def draw_game(surface: pygame.Surface, player_pos: Position, opp_pos: Position, exit_pos: Position, diamonds: Set[Position], font: pygame.font.Font, score: int, time_left: int, game_over: bool, win: bool, blunders: int = 0):
+def draw_path(surface: pygame.Surface, path: List[Position], color: Tuple[int, int, int], alpha: int = 128, width: int = 2):
+    """Draw a path as lines connecting consecutive positions."""
+    if not path or len(path) < 2:
+        return
+    
+    # Create a temporary surface for the path with alpha support
+    path_surface = pygame.Surface((WINDOW_SIZE, WINDOW_SIZE), pygame.SRCALPHA)
+    
+    # Draw lines between consecutive path nodes
+    for i in range(len(path) - 1):
+        start_pos = path[i]
+        end_pos = path[i + 1]
+        
+        # Convert grid positions to pixel coordinates (center of tiles)
+        start_pixel = (start_pos[0] * TILE_SIZE + TILE_SIZE // 2, 
+                       start_pos[1] * TILE_SIZE + TILE_SIZE // 2)
+        end_pixel = (end_pos[0] * TILE_SIZE + TILE_SIZE // 2,
+                     end_pos[1] * TILE_SIZE + TILE_SIZE // 2)
+        
+        # Draw line with alpha
+        pygame.draw.line(path_surface, (*color, alpha), start_pixel, end_pixel, width)
+    
+    # Blit the path surface onto the main surface
+    surface.blit(path_surface, (0, 0))
+
+def draw_game(surface: pygame.Surface, player_pos: Position, opp_pos: Position, exit_pos: Position, diamonds: Set[Position], font: pygame.font.Font, score: int, time_left: int, game_over: bool, win: bool, blunders: int = 0, opp_path: Optional[List[Position]] = None):
     surface.fill(BACKGROUND_COLOR)
     grid(surface)
+    
+    # Draw opponent path if provided (before tiles so it appears behind)
+    if opp_path and not game_over:
+        draw_path(surface, opp_path, (220, 50, 50), alpha=150, width=2)
+    
     tiles(surface, {exit_pos}, EXIT_COLOR)
     tiles(surface, diamonds, DIAMOND_COLOR)
     tiles(surface, {player_pos}, PLAYER_COLOR)
@@ -236,7 +266,12 @@ def main():
                 game_over = True
                 win = True
 
-        draw_game(screen, player_pos, opp_pos, exit_pos, diamonds, font, score, time_left, game_over, win, blunders)
+        # Calculate opponent path for visualization
+        opp_path = None
+        if not game_over:
+            opp_path = astar(opp_pos, player_pos)
+
+        draw_game(screen, player_pos, opp_pos, exit_pos, diamonds, font, score, time_left, game_over, win, blunders, opp_path)
         pygame.display.flip()
 
 if __name__ == "__main__": 
