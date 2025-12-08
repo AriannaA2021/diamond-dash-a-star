@@ -27,7 +27,7 @@ pip install pygame
 Run the game script using Python:
 
 ```bash
-python "# Diamond Dash by Analiese Gonzalez, Ari.py"
+python "diamondDash.py"
 ```
 
 *(Note: You may want to rename the python file to something simpler like `game.py` for easier running!)*
