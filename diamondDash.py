@@ -58,8 +58,8 @@ def astar(start: Position, goal: Position) -> Optional[List[Position]]:
         if current == goal:
             path = [current]
             while current in came_from:
-                path.append(current)
                 current = came_from[current]
+                path.append(current)
             return path[::-1]
 
         for direction in DIRECTIONS.values():
