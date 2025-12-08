@@ -89,7 +89,7 @@ def setup_game():   #sets up initial positions for player, opponent, exit, and d
     used.add(exit_pos)  
     diamonds: Set[Position] = set()
 
-    #places 3 diamonds
+    # places 3 diamonds
     for _ in range(3):  
         diamond_pos = empty_position(used)
         diamonds.add(diamond_pos)
@@ -176,17 +176,19 @@ def main():
                     player_moved = True
 
         if not game_over:
-            if player_moved:
+            if player_moved:  #only move opponent if player has moved
                 opp_pos = opponent_move(opp_pos, player_pos)
                 player_moved = False
             if player_pos in diamonds:
                 diamonds.remove(player_pos)
                 score += 1
 
+            # losing if player gets caught or time runs out
             if player_pos == opp_pos or time_left <= 0:
                 game_over = True
                 win = False
 
+            # winning if player reaches exit with all diamonds
             if player_pos == exit_pos and not diamonds:
                 game_over = True
                 win = True
@@ -194,5 +196,5 @@ def main():
         draw_game(screen, player_pos, opp_pos, exit_pos, diamonds, font, score, time_left, game_over, win)
         pygame.display.flip()
 
-if __name__ == "__main__":
+if __name__ == "__main__": 
     main()
