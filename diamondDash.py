@@ -3,6 +3,7 @@ import pygame
 import random  
 import heapq
 import sys
+import itertools
 from typing import List, Tuple, Optional, Set
 
 # constants for game
@@ -80,20 +81,101 @@ def empty_position(exclude: Set[Position]) -> Position:
         pos = (random.randint(0, GRID_SIZE - 1), random.randint(0, GRID_SIZE - 1))
         if pos not in exclude:
             return pos
+
+def calculate_optimal_path_length(player_pos: Position, diamonds: Set[Position], exit_pos: Position) -> int:
+    """Calculate the shortest path length to collect all diamonds and reach exit."""
+    if not diamonds:
+        path = astar(player_pos, exit_pos)
+        return len(path) - 1 if path else float('inf')
+    
+    diamond_list = list(diamonds)
+    min_path_length = float('inf')
+    
+    # Try all permutations of diamond collection order
+    for perm in itertools.permutations(diamond_list):
+        total_length = 0
+        current_pos = player_pos
+        
+        # Path to collect diamonds in this order
+        for diamond in perm:
+            path = astar(current_pos, diamond)
+            if not path:
+                total_length = float('inf')
+                break
+            total_length += len(path) - 1
+            current_pos = diamond
+        
+        # Path from last diamond to exit
+        if total_length != float('inf'):
+            path = astar(current_pos, exit_pos)
+            if path:
+                total_length += len(path) - 1
+            else:
+                total_length = float('inf')
+        
+        min_path_length = min(min_path_length, total_length)
+    
+    return min_path_length
+
+def is_winnable(player_pos: Position, opp_pos: Position, diamonds: Set[Position], exit_pos: Position) -> bool:
+    """Check if the game setup is winnable."""
+    # Calculate optimal path length for player
+    optimal_path_length = calculate_optimal_path_length(player_pos, diamonds, exit_pos)
+    
+    if optimal_path_length == float('inf'):
+        return False
+    
+    # Calculate initial distance from opponent to player
+    initial_distance = heuristic(opp_pos, player_pos)
+    
+    # The opponent moves toward the player each turn
+    # Player needs to make optimal_path_length moves
+    # Opponent will also make optimal_path_length moves toward player
+    # We need to ensure player can complete path before being caught
+    
+    # Conservative estimate: player needs path_length moves
+    # Opponent starts at initial_distance away
+    # If path_length is reasonable compared to initial_distance, it's winnable
+    # Allow some margin: path should be at most 1.4x initial distance (increased for difficulty)
+    # This ensures challenge while maintaining winnability
+    
+    max_allowed_path = int(initial_distance * 1.4)
+    min_path_length = int(initial_distance * 0.5) # Ensure it's not too easy
+    
+    # Also ensure diamonds aren't all clustered too far from player
+    # Check average distance of diamonds from player
+    if diamonds:
+        avg_diamond_distance = sum(heuristic(player_pos, d) for d in diamonds) / len(diamonds)
+        # Ensure average diamond isn't too far (more than half the grid)
+        if avg_diamond_distance > GRID_SIZE:
+            return False
+    
+    return min_path_length <= optimal_path_length <= max_allowed_path
         
 def setup_game():   #sets up initial positions for player, opponent, exit, and diamonds
     player_pos: Position = (0, 0)
     opp_pos: Position = (GRID_SIZE - 1, GRID_SIZE - 1)
-    used = {player_pos, opp_pos}
-    exit_pos = empty_position(used)
-    used.add(exit_pos)  
-    diamonds: Set[Position] = set()
+    
+    # Try to generate a winnable game setup
+    max_attempts = 100
+    for attempt in range(max_attempts):
+        used = {player_pos, opp_pos}
+        exit_pos = empty_position(used)
+        used.add(exit_pos)  
+        diamonds: Set[Position] = set()
 
-    # places 3 diamonds
-    for _ in range(3):  
-        diamond_pos = empty_position(used)
-        diamonds.add(diamond_pos)
-        used.add(diamond_pos)
+        # places 3 diamonds
+        for _ in range(3):  
+            diamond_pos = empty_position(used)
+            diamonds.add(diamond_pos)
+            used.add(diamond_pos)
+        
+        # Check if this setup is winnable
+        if is_winnable(player_pos, opp_pos, diamonds, exit_pos):
+            return player_pos, opp_pos, exit_pos, diamonds
+    
+    # If we couldn't find a winnable setup after max attempts, return the last one anyway
+    # (This should rarely happen, but prevents infinite loops)
     return player_pos, opp_pos, exit_pos, diamonds
 
 def grid(surface: pygame.Surface):
