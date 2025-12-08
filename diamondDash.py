@@ -112,7 +112,7 @@ def tiles(surface: pygame.Surface, positions: Set[Position], color: Tuple[int, i
         )
         pygame.draw.rect(surface, color, rect, border_radius=4)
 
-def draw_game(surface: pygame.Surface, player_pos: Position, opp_pos: Position, exit_pos: Position, diamonds: Set[Position], font: pygame.font.Font, score: int, time_left: int, game_over: bool, win: bool):
+def draw_game(surface: pygame.Surface, player_pos: Position, opp_pos: Position, exit_pos: Position, diamonds: Set[Position], font: pygame.font.Font, score: int, time_left: int, game_over: bool, win: bool, blunders: int = 0):
     surface.fill(BACKGROUND_COLOR)
     grid(surface)
     tiles(surface, {exit_pos}, EXIT_COLOR)
@@ -122,8 +122,12 @@ def draw_game(surface: pygame.Surface, player_pos: Position, opp_pos: Position, 
 
     score_text = font.render(f"Score: {score}", True, TEXT_COLOR)
     time_text = font.render(f"Time: {time_left}", True, TEXT_COLOR)
+    blunders_text = font.render(f"Blunders: {blunders}", True, TEXT_COLOR)
+    
     surface.blit(score_text, (10, 10))
     surface.blit(time_text, (WINDOW_SIZE - time_text.get_width() - 10, 10))
+    # Display blunders in bottom-left corner
+    surface.blit(blunders_text, (10, WINDOW_SIZE - blunders_text.get_height() - 10))
 
     if game_over:
         overlay = pygame.Surface((WINDOW_SIZE, WINDOW_SIZE))
@@ -150,6 +154,31 @@ def opponent_move(opp_pos: Position, player_pos: Position) -> Position:
         return path[1]
     return opp_pos
 
+def get_optimal_next_step(player_pos: Position, diamonds: Set[Position], exit_pos: Position) -> Optional[Position]:
+    """Find the optimal next step toward the nearest goal (diamond or exit)."""
+    # Determine the current goal: nearest diamond if any remain, otherwise exit
+    if diamonds:
+        # Find nearest diamond
+        nearest_diamond = None
+        min_distance = float('inf')
+        for diamond in diamonds:
+            distance = heuristic(player_pos, diamond)
+            if distance < min_distance:
+                min_distance = distance
+                nearest_diamond = diamond
+        
+        if nearest_diamond:
+            path = astar(player_pos, nearest_diamond)
+            if path and len(path) > 1:
+                return path[1]  # Return next step in path
+    else:
+        # All diamonds collected, go to exit
+        path = astar(player_pos, exit_pos)
+        if path and len(path) > 1:
+            return path[1]  # Return next step in path
+    
+    return None
+
 def main():
     pygame.init()
     screen = pygame.display.set_mode((WINDOW_SIZE, WINDOW_SIZE))
@@ -163,6 +192,10 @@ def main():
     game_over = False
     win = False
     player_moved = False
+    
+    # Blunders tracking
+    blunders = 0
+    
     while True:
         dt = clock.tick(FPS) / 1000
         time_left = GAME_TIMER - (pygame.time.get_ticks() - start_ticks) // 1000
@@ -172,7 +205,17 @@ def main():
                 sys.exit()
             if event.type == pygame.KEYDOWN and not game_over:
                 if event.key in DIRECTIONS:
-                    player_pos = player_move(player_pos, DIRECTIONS[event.key])
+                    # Get optimal next step before player moves
+                    optimal_next = get_optimal_next_step(player_pos, diamonds, exit_pos)
+                    
+                    # Move player
+                    new_player_pos = player_move(player_pos, DIRECTIONS[event.key])
+                    
+                    # Check if move is a blunder (doesn't match optimal)
+                    if optimal_next and new_player_pos != optimal_next:
+                        blunders += 1
+                    
+                    player_pos = new_player_pos
                     player_moved = True
 
         if not game_over:
@@ -193,7 +236,7 @@ def main():
                 game_over = True
                 win = True
 
-        draw_game(screen, player_pos, opp_pos, exit_pos, diamonds, font, score, time_left, game_over, win)
+        draw_game(screen, player_pos, opp_pos, exit_pos, diamonds, font, score, time_left, game_over, win, blunders)
         pygame.display.flip()
 
 if __name__ == "__main__": 
