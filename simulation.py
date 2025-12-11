@@ -44,7 +44,15 @@ def astar_manhattan(start, goal):
                         heapq.heappush(open_set, (f_score[neighbor], neighbor))
     return None
 
-# 3. AI Logic to Determine Target
+# 3. Opponent Move Functions
+def opponent_move_manhattan(opp_pos, player_pos):
+    """Opponent move function using Manhattan heuristic."""
+    path = astar_manhattan(opp_pos, player_pos)
+    if path and len(path) > 1:
+        return path[1]
+    return opp_pos
+
+# 4. AI Logic to Determine Target
 def get_user_target(player_pos, diamonds, exit_pos):
     """
     Decides where the AI User wants to go.
@@ -58,14 +66,28 @@ def get_user_target(player_pos, diamonds, exit_pos):
     else:
         return exit_pos
 
-# 4. Main Simulation Loop
-def run_simulation(num_simulations=500):
+# 5. Main Simulation Loop
+def run_simulation(num_simulations=500, opponent_move_func=None, opponent_type=""):
+    """
+    Run simulation with specified opponent move function.
+    
+    Args:
+        num_simulations: Number of simulations to run
+        opponent_move_func: Function to use for opponent moves
+        opponent_type: String describing opponent type (for display)
+    """
+    if opponent_move_func is None:
+        opponent_move_func = diamondDash.opponent_move
+        opponent_type = "Euclidean"
+    
     total_astar_time_ns = 0
     total_astar_calls = 0
     player_wins = 0
     player_losses = 0
     
-    print(f"Running {num_simulations} simulations...")
+    print(f"\n{'='*60}")
+    print(f"Running {num_simulations} simulations (Opponent: {opponent_type})...")
+    print(f"{'='*60}")
     
     for i in range(num_simulations):
         # Reset game state
@@ -105,10 +127,9 @@ def run_simulation(num_simulations=500):
                 won = True
             
             # --- OPPONENT TURN ---
-            # Opponent moves towards player (uses original game logic)
-            # We assume the opponent still behaves normally
+            # Opponent moves towards player using specified function
             if not game_over:
-                opp_pos = diamondDash.opponent_move(opp_pos, player_pos)
+                opp_pos = opponent_move_func(opp_pos, player_pos)
                 
                 # Check Loss
                 if player_pos == opp_pos:
@@ -121,12 +142,13 @@ def run_simulation(num_simulations=500):
         else:
             player_losses += 1
 
-    # 5. Calculate and Print Results
+    # Calculate and Print Results
+    win_rate = (player_wins / num_simulations) * 100 if num_simulations > 0 else 0
+    
     if total_astar_calls > 0:
         avg_ns = total_astar_time_ns / total_astar_calls
         avg_us = avg_ns / 1000.0  # Convert nanoseconds to microseconds
-        win_rate = (player_wins / num_simulations) * 100 if num_simulations > 0 else 0
-        print(f"\n--- Results ---")
+        print(f"\n--- Results (Opponent: {opponent_type}) ---")
         print(f"Total Simulations: {num_simulations}")
         print(f"Player Wins: {player_wins}")
         print(f"Player Losses: {player_losses}")
@@ -134,7 +156,46 @@ def run_simulation(num_simulations=500):
         print(f"Total A* Calls: {total_astar_calls}")
         print(f"Average A* Time: {avg_us:.4f} microseconds")
     else:
+        avg_us = 0
         print("No A* calls were made.")
+    
+    return {
+        'opponent_type': opponent_type,
+        'player_wins': player_wins,
+        'player_losses': player_losses,
+        'win_rate': win_rate,
+        'total_astar_calls': total_astar_calls,
+        'avg_time_us': avg_us
+    }
+
+# 6. Wrapper functions for specific opponent types
+def run_simulation_euclidean_opponent(num_simulations=500):
+    """Run simulation with opponent using Euclidean distance."""
+    return run_simulation(num_simulations, diamondDash.opponent_move, "Euclidean")
+
+def run_simulation_manhattan_opponent(num_simulations=500):
+    """Run simulation with opponent using Manhattan distance."""
+    return run_simulation(num_simulations, opponent_move_manhattan, "Manhattan")
 
 if __name__ == "__main__":
-    run_simulation()
+    num_sims = 500
+    
+    # Run simulation with Euclidean opponent
+    results_euclidean = run_simulation_euclidean_opponent(num_sims)
+    
+    # Run simulation with Manhattan opponent
+    results_manhattan = run_simulation_manhattan_opponent(num_sims)
+    
+    # Compare results
+    print(f"\n{'='*60}")
+    print("COMPARISON SUMMARY")
+    print(f"{'='*60}")
+    print(f"{'Metric':<30} {'Euclidean':<15} {'Manhattan':<15}")
+    print(f"{'-'*60}")
+    print(f"{'Player Wins':<30} {results_euclidean['player_wins']:<15} {results_manhattan['player_wins']:<15}")
+    print(f"{'Player Losses':<30} {results_euclidean['player_losses']:<15} {results_manhattan['player_losses']:<15}")
+    print(f"{'Win Rate (%)':<30} {results_euclidean['win_rate']:.2f}{'%':<12} {results_manhattan['win_rate']:.2f}{'%':<12}")
+    euclidean_time = f"{results_euclidean['avg_time_us']:.4f}"
+    manhattan_time = f"{results_manhattan['avg_time_us']:.4f}"
+    print(f"{'Avg A* Time (μs)':<30} {euclidean_time:<15} {manhattan_time:<15}")
+    print(f"{'='*60}")
