@@ -3,6 +3,7 @@ import pygame
 import random  
 import heapq
 import sys
+import math
 from typing import List, Tuple, Optional, Set
 
 # constants for game
@@ -31,8 +32,8 @@ DIRECTIONS = {pygame.K_UP: (0, -1),
 Position = Tuple[int, int]
 
 # A* pathfinding node
-def heuristic(a: Position, b: Position) -> int:
-    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+def heuristic(a: Position, b: Position) -> float:
+    return math.hypot(a[0] - b[0], a[1] - b[1])
 
 def get_neighbors(pos: Position) -> List[Position]:
     neighbors = []
@@ -158,6 +159,7 @@ def draw_game(surface: pygame.Surface, player_pos: Position, opp_pos: Position, 
     surface.blit(time_text, (WINDOW_SIZE - time_text.get_width() - 10, 10))
     # Display blunders in bottom-left corner
     surface.blit(blunders_text, (10, WINDOW_SIZE - blunders_text.get_height() - 10))
+
 
     if game_over:
         overlay = pygame.Surface((WINDOW_SIZE, WINDOW_SIZE))
