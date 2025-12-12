@@ -3,12 +3,11 @@ import heapq
 import time
 import math
 
-# 1. Define the Manhattan Heuristic
+# Manhattan Heuristic
 def manhattan_heuristic(a, b):
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
-# 2. Implement A* using the Manhattan Heuristic
-# This is a modified version of the game's astar function
+# Implement A* using the Manhattan Heuristic to simulate player movement
 def astar_manhattan(start, goal):
     if start == goal:
         return [start]
@@ -17,7 +16,7 @@ def astar_manhattan(start, goal):
     heapq.heappush(open_set, (0, start))
     came_from = {}
     g_score = {start: 0}
-    # Use manhattan_heuristic here
+    #manhattan_heuristic
     f_score = {start: manhattan_heuristic(start, goal)}
 
     while open_set:
@@ -32,27 +31,31 @@ def astar_manhattan(start, goal):
 
         for direction in diamondDash.DIRECTIONS.values():
             neighbor = (current[0] + direction[0], current[1] + direction[1])
-            # Check bounds using GRID_SIZE from the game module
+
+            # bounds checking using GRID_SIZE from the game module
             if 0 <= neighbor[0] < diamondDash.GRID_SIZE and 0 <= neighbor[1] < diamondDash.GRID_SIZE:
                 tentative_g_score = g_score[current] + 1
                 if tentative_g_score < g_score.get(neighbor, float('inf')):
                     came_from[neighbor] = current
                     g_score[neighbor] = tentative_g_score
-                    # Use manhattan_heuristic here
+
+                    # using manhattan_heuristic
                     f_score[neighbor] = tentative_g_score + manhattan_heuristic(neighbor, goal)
                     if neighbor not in [i[1] for i in open_set]:
                         heapq.heappush(open_set, (f_score[neighbor], neighbor))
     return None
 
-# 3. Opponent Move Functions
+#Opponent move functions
 def opponent_move_manhattan(opp_pos, player_pos):
-    """Opponent move function using Manhattan heuristic."""
+    """
+    Opponent move function using Manhattan heuristic.
+    """
     path = astar_manhattan(opp_pos, player_pos)
     if path and len(path) > 1:
         return path[1]
     return opp_pos
 
-# 4. AI Logic to Determine Target
+#AI logic to determine target
 def get_user_target(player_pos, diamonds, exit_pos):
     """
     Decides where the AI User wants to go.
@@ -66,7 +69,7 @@ def get_user_target(player_pos, diamonds, exit_pos):
     else:
         return exit_pos
 
-# 5. Main Simulation Loop
+#\Main Simulation Loop
 def run_simulation(num_simulations=500, opponent_move_func=None, opponent_type=""):
     """
     Run simulation with specified opponent move function.
@@ -100,7 +103,7 @@ def run_simulation(num_simulations=500, opponent_move_func=None, opponent_type="
         while not game_over and steps < max_steps:
             steps += 1
             
-            # --- USER AI TURN ---
+            #USER AI TURN
             # 1. Determine target
             target = get_user_target(player_pos, diamonds, exit_pos)
             
@@ -117,7 +120,7 @@ def run_simulation(num_simulations=500, opponent_move_func=None, opponent_type="
             if path and len(path) > 1:
                 player_pos = path[1]
             
-            # --- CHECK GAME LOGIC ---
+            #CHECK GAME LOGIC
             if player_pos in diamonds:
                 diamonds.remove(player_pos)
             
@@ -126,7 +129,7 @@ def run_simulation(num_simulations=500, opponent_move_func=None, opponent_type="
                 game_over = True
                 won = True
             
-            # --- OPPONENT TURN ---
+            #OPPONENT TURN
             # Opponent moves towards player using specified function
             if not game_over:
                 opp_pos = opponent_move_func(opp_pos, player_pos)
@@ -142,7 +145,7 @@ def run_simulation(num_simulations=500, opponent_move_func=None, opponent_type="
         else:
             player_losses += 1
 
-    # Calculate and Print Results
+    # Print Results
     win_rate = (player_wins / num_simulations) * 100 if num_simulations > 0 else 0
     
     if total_astar_calls > 0:
@@ -168,7 +171,7 @@ def run_simulation(num_simulations=500, opponent_move_func=None, opponent_type="
         'avg_time_us': avg_us
     }
 
-# 6. Wrapper functions for specific opponent types
+# Wrapper functions for specific opponent types
 def run_simulation_euclidean_opponent(num_simulations=500):
     """Run simulation with opponent using Euclidean distance."""
     return run_simulation(num_simulations, diamondDash.opponent_move, "Euclidean")
@@ -180,7 +183,7 @@ def run_simulation_manhattan_opponent(num_simulations=500):
 if __name__ == "__main__":
     num_sims = 500
     
-    # Run simulation with Euclidean opponent
+    #Run simulation with Euclidean opponent
     results_euclidean = run_simulation_euclidean_opponent(num_sims)
     
     # Run simulation with Manhattan opponent

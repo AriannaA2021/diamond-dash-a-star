@@ -114,11 +114,13 @@ def tiles(surface: pygame.Surface, positions: Set[Position], color: Tuple[int, i
         pygame.draw.rect(surface, color, rect, border_radius=4)
 
 def draw_path(surface: pygame.Surface, path: List[Position], color: Tuple[int, int, int], alpha: int = 128, width: int = 2):
-    """Draw a path as lines connecting consecutive positions."""
+    """
+    Draw a path as lines connecting consecutive positions.
+    """
     if not path or len(path) < 2:
         return
     
-    # Create a temporary surface for the path with alpha support
+    #reate a temporary surface for the path with alpha support
     path_surface = pygame.Surface((WINDOW_SIZE, WINDOW_SIZE), pygame.SRCALPHA)
     
     # Draw lines between consecutive path nodes
@@ -134,15 +136,13 @@ def draw_path(surface: pygame.Surface, path: List[Position], color: Tuple[int, i
         
         # Draw line with alpha
         pygame.draw.line(path_surface, (*color, alpha), start_pixel, end_pixel, width)
-    
-    # Blit the path surface onto the main surface
     surface.blit(path_surface, (0, 0))
 
 def draw_game(surface: pygame.Surface, player_pos: Position, opp_pos: Position, exit_pos: Position, diamonds: Set[Position], font: pygame.font.Font, score: int, time_left: int, game_over: bool, win: bool, opp_path: Optional[List[Position]] = None):
     surface.fill(BACKGROUND_COLOR)
     grid(surface)
     
-    # Draw opponent path if provided (before tiles so it appears behind)
+    # Draw opponent path
     if opp_path and not game_over:
         draw_path(surface, opp_path, (220, 50, 50), alpha=150, width=2)
     
@@ -157,7 +157,6 @@ def draw_game(surface: pygame.Surface, player_pos: Position, opp_pos: Position, 
     
     surface.blit(score_text, (10, 10))
     surface.blit(time_text, (WINDOW_SIZE - time_text.get_width() - 10, 10))
-    # Display blunders in bottom-left corner
     # surface.blit(blunders_text, (10, WINDOW_SIZE - blunders_text.get_height() - 10))
 
 
@@ -187,7 +186,9 @@ def opponent_move(opp_pos: Position, player_pos: Position) -> Position:
     return opp_pos
 
 def get_optimal_next_step(player_pos: Position, diamonds: Set[Position], exit_pos: Position) -> Optional[Position]:
-    """Find the optimal next step toward the nearest goal (diamond or exit)."""
+    """
+    Find the optimal next step toward the nearest goal (diamond or exit).
+    """
     # Determine the current goal: nearest diamond if any remain, otherwise exit
     if diamonds:
         # Find nearest diamond
